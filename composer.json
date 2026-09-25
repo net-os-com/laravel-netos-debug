@@ -1,9 +1,15 @@
 {
     "name": "net-os/laravel-netos-debug",
     "description": "Ships debugbar data for every request to the NetOS Debug desktop app.",
-    "keywords": ["net-os", "laravel", "debugbar", "ray", "debugging"],
+    "keywords": [
+        "net-os",
+        "laravel",
+        "debugbar",
+        "ray",
+        "debugging"
+    ],
     "homepage": "https://github.com/net-os-com/laravel-netos-debug",
-    "license": "proprietary",
+    "license": "MIT",
     "authors": [
         {
             "name": "Net OS B.V.",

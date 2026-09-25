@@ -4,7 +4,7 @@ Ships the full Laravel Debugbar payload for every finished request to the
 [NetOS Debug](https://github.com/net-os-com/debug-ray) desktop app, which
 renders it as a debugbar clone in its Requests view.
 
-Internal Net OS package. Not published on Packagist.
+Not on Packagist; install it straight from the repository.
 
 ## Installation
 
