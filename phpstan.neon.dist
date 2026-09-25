@@ -1,0 +1,10 @@
+parameters:
+    level: 6
+    paths:
+        - src
+    # config/netos-debug.php is excluded deliberately. Larastan resolves "the
+    # config directory" from the application's config path, which for a package
+    # under testbench is the skeleton app's, never the package's own. env() in a
+    # package config stub is correct, so analysing it only yields false
+    # positives.
+    tmpDir: build/phpstan
