@@ -7,6 +7,7 @@ namespace NetOs\Debug\Shapers;
 use Illuminate\Http\Request;
 use NetOs\Debug\Describers\CacheDescriber;
 use NetOs\Debug\Describers\EventsDescriber;
+use NetOs\Debug\Describers\MailDescriber;
 use NetOs\Debug\Describers\RequestDescriber;
 use NetOs\Debug\Describers\RouteDescriber;
 use NetOs\Debug\Describers\TimelineDescriber;
@@ -36,6 +37,7 @@ class RequestShaper
         private readonly RequestDescriber $request,
         private readonly EventsDescriber $events,
         private readonly CacheDescriber $cache,
+        private readonly MailDescriber $mail,
         private readonly TimelineDescriber $timeline,
     ) {}
 
@@ -64,6 +66,7 @@ class RequestShaper
             ...$this->request->describe($request, $response, $data),
             'events' => $this->events->describe($data),
             'cache' => $this->cache->describe($data),
+            'mail' => $this->mail->describe($data),
             'queries' => $this->queries->shape($data, $startedAt),
             'timeline' => $this->timeline->describe($data),
             'collectorCounts' => $this->collectorCounts($data),

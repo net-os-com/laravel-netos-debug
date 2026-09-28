@@ -49,6 +49,8 @@ php artisan vendor:publish --tag=netos-debug-config
 | Option | Set to | Why |
 |---|---|---|
 | `collectors.route` | `true` | Route name, action and middleware |
+| `collectors.cache` | `true` | Cache hits, misses, writes and forgets |
+| `collectors.auth` | `true` | The authenticated user |
 | `options.db.with_params` | `false` | The view wants raw SQL with `?` plus separate bindings |
 | `options.db.backtrace` | `true` | Per-query backtrace |
 | `options.db.timeline` | `true` | Queries on the shared timeline |

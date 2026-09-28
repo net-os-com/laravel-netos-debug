@@ -21,6 +21,11 @@ class NetOsDebugServiceProvider extends PackageServiceProvider
      */
     private const array DEBUGBAR_OPTIONS = [
         'debugbar.collectors.route' => true,
+        // Both feed panels the Requests view already ships. Debugbar leaves
+        // them off, which is why the Cache tab and the authenticated-user card
+        // were arriving empty rather than merely unused.
+        'debugbar.collectors.cache' => true,
+        'debugbar.collectors.auth' => true,
         'debugbar.options.db.with_params' => false,
         'debugbar.options.db.backtrace' => true,
         'debugbar.options.db.timeline' => true,
