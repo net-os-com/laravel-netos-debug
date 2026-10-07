@@ -7,8 +7,10 @@ namespace NetOs\Debug\Http\Middleware;
 use Closure;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use NetOs\Debug\Collectors\RequestCollector;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 /**
  * Decides whether a finished request is shipped to NetOS Debug, and leaves the
@@ -24,6 +26,9 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class SendRequestToNetosDebug
 {
+    /** Set once a failure has been reported, so the log keeps one line. */
+    private static bool $reported = false;
+
     public function __construct(private readonly Repository $config) {}
 
     /**
@@ -40,8 +45,34 @@ class SendRequestToNetosDebug
             return;
         }
 
-        // A debug tool must never be able to fail a request.
-        rescue(fn () => app(RequestCollector::class)->collect($request, $response), report: false);
+        // A debug tool must never be able to fail a request — but it must not
+        // drop one in silence either. Swallowing everything once hid a cast
+        // that threw on authenticated requests, so signed-in traffic quietly
+        // stopped arriving while preflights kept coming through.
+        try {
+            app(RequestCollector::class)->collect($request, $response);
+        } catch (Throwable $exception) {
+            $this->reportOnce($exception);
+        }
+    }
+
+    /**
+     * One line per process. Repeating it for every request would bury the log
+     * of the application being debugged, which is the opposite of helpful.
+     */
+    private function reportOnce(Throwable $exception): void
+    {
+        if (self::$reported) {
+            return;
+        }
+
+        self::$reported = true;
+
+        Log::warning('[netos-debug] collecting this request failed, so it was not sent', [
+            'exception' => $exception::class,
+            'message' => $exception->getMessage(),
+            'at' => $exception->getFile().':'.$exception->getLine(),
+        ]);
     }
 
     private function isExcluded(Request $request): bool

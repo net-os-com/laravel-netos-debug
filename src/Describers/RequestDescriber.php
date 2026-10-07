@@ -97,14 +97,35 @@ class RequestDescriber
         $signedIn = [];
 
         foreach ((array) $guards as $guard => $user) {
-            if ($user === null || $user === '') {
+            $value = $this->authValue($user);
+
+            if ($value === '') {
                 continue;
             }
 
-            $signedIn[] = ['key' => (string) $guard, 'value' => strip_tags((string) $user)];
+            $signedIn[] = ['key' => (string) $guard, 'value' => $value];
         }
 
         return $signedIn;
+    }
+
+    /**
+     * Debugbar reports a guard as null when nobody is signed in, and otherwise
+     * as whatever its formatter made of the user: a plain string in simple
+     * setups, but an array of name/id/email once the auth collector has user
+     * details to show. Casting that array to a string threw, and because the
+     * collector runs behind rescue(), every signed-in request was dropped in
+     * silence while unauthenticated ones kept arriving.
+     */
+    private function authValue(mixed $user): string
+    {
+        if (is_array($user)) {
+            $name = $user['name'] ?? $user['email'] ?? $user['id'] ?? null;
+
+            return is_scalar($name) ? strip_tags((string) $name) : '';
+        }
+
+        return is_scalar($user) ? strip_tags((string) $user) : '';
     }
 
     /**

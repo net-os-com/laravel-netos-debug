@@ -53,4 +53,17 @@ return [
     | to false if the project would rather own those settings itself.
     */
     'configure_debugbar' => true,
+
+    /*
+    | Saved API requests, written as OpenAPI documents inside this repository so
+    | they can be reviewed and merged like anything else the team owns. One file
+    | per collection, relative to the application root unless the path is
+    | absolute.
+    |
+    | Nothing secret is written: values that resolve at send time are stored as
+    | the reference — `{{ token }}` — rather than as what it stands for.
+    */
+    'collections' => [
+        'path' => env('NETOS_DEBUG_COLLECTIONS_PATH', 'openapi'),
+    ],
 ];

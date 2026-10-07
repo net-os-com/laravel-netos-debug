@@ -43,6 +43,7 @@ php artisan vendor:publish --tag=netos-debug-config
 | `except` | debugbar, telescope, horizon, ignition | Paths never shipped, matched with `Request::is()` |
 | `max_payload_bytes` | 512 KB | Larger payloads are trimmed before sending |
 | `configure_debugbar` | `true` | Whether the package applies the Debugbar options below |
+| `collections.path` | `openapi` | Where saved API requests are written, relative to the app root |
 
 ### Debugbar options this package applies
 
@@ -103,3 +104,58 @@ composer format    # Pint
 
 There is no test suite; verification is a real request against a running app
 with NetOS Debug open.
+
+## Saved API requests
+
+The desktop app's API tab is a client for this application: you pick a route,
+fill it in, send it, and read the response. A request worth keeping is saved
+through this package, into this repository:
+
+```bash
+php artisan netos-debug:collections list
+php artisan netos-debug:collections read desks
+php artisan netos-debug:collections forget desks get-desks
+echo '{"name":"List desks","method":"GET","path":"/desks"}' \
+    | php artisan netos-debug:collections save desks
+```
+
+One file per collection, under `collections.path` — `openapi/desks.yaml` by
+default — as an OpenAPI 3.1 document:
+
+```yaml
+openapi: 3.1.0
+info:
+  title: Desks
+  version: 1.0.0
+paths:
+  /desks:
+    get:
+      operationId: get-desks
+      summary: 'List desks'
+      parameters:
+        -
+          name: X-Tenant
+          in: header
+          schema:
+            type: string
+          example: '{{ tenant }}'
+      x-netos-debug:
+        name: 'List desks'
+        bodyMode: none
+        auth: impersonate
+```
+
+OpenAPI because these files are meant to be read in a pull request and opened by
+something other than one app; YAML because a changed header should be one
+changed line in a diff. What OpenAPI has no field for — which body editor was
+open, how the request authenticates — lives under `x-netos-debug`, which any
+other reader will ignore.
+
+**Nothing secret is written.** A value that resolves at send time is stored as
+the reference, `{{ token }}`, not as what it stands for; the values live in the
+desktop app's own storage. The authentication *mode* is saved, but never who was
+impersonated and never a token.
+
+Saving the same verb and path twice replaces that operation rather than adding a
+near-duplicate, and emptying a collection deletes its file instead of leaving an
+`openapi: 3.1.0` with nothing under it.
