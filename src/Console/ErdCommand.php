@@ -39,8 +39,9 @@ class ErdCommand extends Command
         }
 
         $layout = is_array($payload['layout'] ?? null) ? $payload['layout'] : [];
+        $stickies = is_array($payload['stickies'] ?? null) ? array_values($payload['stickies']) : [];
 
-        return $this->say(['files' => $store->save($payload['dbml'], $layout)]);
+        return $this->say(['files' => $store->save($payload['dbml'], $layout, $stickies)]);
     }
 
     /**
