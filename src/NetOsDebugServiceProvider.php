@@ -7,6 +7,7 @@ namespace NetOs\Debug;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Http\Kernel;
 use NetOs\Debug\Console\CollectionsCommand;
+use NetOs\Debug\Console\ErdCommand;
 use NetOs\Debug\Http\Middleware\SendRequestToNetosDebug;
 use NetOs\Debug\Support\PayloadSizeLimiter;
 use Spatie\LaravelPackageTools\Package;
@@ -37,7 +38,8 @@ class NetOsDebugServiceProvider extends PackageServiceProvider
         $package
             ->name('netos-debug')
             ->hasConfigFile()
-            ->hasCommand(CollectionsCommand::class);
+            ->hasCommand(CollectionsCommand::class)
+            ->hasCommand(ErdCommand::class);
     }
 
     public function packageRegistered(): void

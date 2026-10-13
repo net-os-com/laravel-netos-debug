@@ -66,4 +66,12 @@ return [
     'collections' => [
         'path' => env('NETOS_DEBUG_COLLECTIONS_PATH', 'openapi'),
     ],
+
+    /*
+    | Where the schema diagram is kept. Both schema.dbml and schema.layout.json
+    | land here, beside the migrations they describe.
+    */
+    'erd' => [
+        'path' => env('NETOS_DEBUG_ERD_PATH', 'database'),
+    ],
 ];
