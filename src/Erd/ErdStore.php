@@ -62,7 +62,7 @@ class ErdStore
     }
 
     /**
-     * @return array{layout: array<string, mixed>, savedAt: string|null}
+     * @return array{dbml: string, layout: array<string, mixed>, savedAt: string|null}
      */
     public function read(): array
     {
@@ -70,13 +70,27 @@ class ErdStore
         $decoded = $raw === false ? null : json_decode($raw, true);
 
         if (! is_array($decoded)) {
-            return ['layout' => [], 'savedAt' => null];
+            return ['dbml' => $this->dbml(), 'layout' => [], 'savedAt' => null];
         }
 
         return [
+            'dbml' => $this->dbml(),
             'layout' => is_array($decoded['tables'] ?? null) ? $decoded['tables'] : [],
             'savedAt' => is_string($decoded['savedAt'] ?? null) ? $decoded['savedAt'] : null,
         ];
+    }
+
+    /**
+     * The committed diagram itself.
+     *
+     * It is read back, unlike when this file was write-only: the editor opens
+     * on what the repository holds rather than making you import first.
+     */
+    private function dbml(): string
+    {
+        $raw = is_file($this->schemaFile()) ? file_get_contents($this->schemaFile()) : false;
+
+        return $raw === false ? '' : $raw;
     }
 
     /** Reported relative to the project, which is how a person refers to it. */
