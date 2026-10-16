@@ -80,6 +80,14 @@ final class OpenApiDocument
             'summary' => $request->summary !== '' ? $request->summary : $request->name,
         ];
 
+        // Folders are OpenAPI tags: a reader of this file in Swagger UI sees the
+        // same grouping the sidebar draws, and a tool that has never heard of
+        // this app still understands it. The nesting lives in the tag's own
+        // name, which is the part OpenAPI leaves to whoever writes it.
+        if ($request->folder !== '') {
+            $operation['tags'] = [$request->folder];
+        }
+
         $parameters = [];
 
         foreach ($request->pathParams as $parameter) {
@@ -180,7 +188,30 @@ final class OpenApiDocument
             'bodyMode' => $extra['bodyMode'] ?? ($json !== '' ? 'json' : 'none'),
             'json' => $json,
             'auth' => $extra['auth'] ?? 'none',
+            'folder' => self::firstTag($operation['tags'] ?? null),
         ]);
+    }
+
+    /**
+     * The folder, out of however many tags the operation carries.
+     *
+     * A document written by hand or by another tool can tag an operation several
+     * ways; the first is the one this app treats as the folder, and the rest are
+     * left where they are rather than being guessed at.
+     */
+    private static function firstTag(mixed $tags): string
+    {
+        if (! is_array($tags)) {
+            return '';
+        }
+
+        foreach ($tags as $tag) {
+            if (is_string($tag) && trim($tag) !== '') {
+                return trim($tag);
+            }
+        }
+
+        return '';
     }
 
     /**

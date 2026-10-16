@@ -33,6 +33,17 @@ final readonly class SavedRequest
         /** `none`, `bearer` or `impersonate` — never who, and never the token. */
         public string $auth = 'none',
         public string $summary = '',
+        /**
+         * Where this sits inside its collection, as a slash-separated path —
+         * `Desks/Bookings`, or empty for the root of the file.
+         *
+         * A collection grows into something you scroll before it grows into
+         * something you keep, so requests get somewhere to go. It is one string
+         * rather than a nested structure because that is what survives a file
+         * that someone hand-edits: a typo makes a folder, never a broken
+         * document.
+         */
+        public string $folder = '',
     ) {}
 
     /** @param  array<string, mixed>  $raw */
@@ -49,6 +60,7 @@ final readonly class SavedRequest
             json: self::text($raw['json'] ?? ''),
             auth: self::authMode(self::text($raw['auth'] ?? 'none')),
             summary: self::text($raw['summary'] ?? ''),
+            folder: self::folder(self::text($raw['folder'] ?? '')),
         );
     }
 
@@ -66,6 +78,7 @@ final readonly class SavedRequest
             'json' => $this->json,
             'auth' => $this->auth,
             'summary' => $this->summary,
+            'folder' => $this->folder,
         ];
     }
 
@@ -85,6 +98,24 @@ final readonly class SavedRequest
     private static function text(mixed $value): string
     {
         return is_scalar($value) ? trim((string) $value) : '';
+    }
+
+    /**
+     * A folder path, reduced to something that can be drawn as a tree.
+     *
+     * Blank segments are dropped rather than kept, so `Desks//Bookings/` and
+     * ` Desks / Bookings ` are the same folder as `Desks/Bookings` — otherwise
+     * two rows in the sidebar would carry the same name and neither would be
+     * wrong.
+     */
+    private static function folder(string $value): string
+    {
+        $segments = array_values(array_filter(
+            array_map(trim(...), explode('/', $value)),
+            static fn (string $segment): bool => $segment !== '',
+        ));
+
+        return implode('/', $segments);
     }
 
     /** A path is stored with its leading slash, however it arrived. */
