@@ -55,6 +55,44 @@ return [
     'configure_debugbar' => true,
 
     /*
+    | Every call this application makes with the HTTP client, shipped to the
+    | HTTP client view as it finishes — including the ones made from queued
+    | jobs, the scheduler and artisan commands, where there is no request to
+    | hang them off.
+    |
+    | Only calls that go through Laravel's own client are seen: those are the
+    | ones the framework fires events for. A package that builds its own Guzzle
+    | client stays invisible, because Guzzle has no way to be watched globally.
+    |
+    | Credentials are never shipped. Authorization, cookie and proxy headers are
+    | always replaced with a note of their length, and `redact` adds to that
+    | list — each entry is matched against the header name with `fnmatch`, so
+    | `x-*-token` covers a family of them.
+    */
+    'http_client' => [
+        'enabled' => env('NETOS_DEBUG_HTTP_CLIENT', true),
+
+        /*
+        | URLs that are never shipped, matched with `Str::is()`. Health checks
+        | and anything that would report on this tool itself belong here.
+        */
+        'except' => [],
+
+        'redact' => [
+            'x-api-key',
+            'api-key',
+            'x-auth-token',
+            'x-*-signature',
+        ],
+
+        /*
+        | Bodies longer than this are cut, with a note saying so. A page of JSON
+        | from an upstream is worth seeing; a 40MB export is not.
+        */
+        'max_body_bytes' => (int) env('NETOS_DEBUG_HTTP_CLIENT_BODY_BYTES', 16 * 1_024),
+    ],
+
+    /*
     | Saved API requests, written as OpenAPI documents inside this repository so
     | they can be reviewed and merged like anything else the team owns. One file
     | per collection, relative to the application root unless the path is

@@ -5,11 +5,20 @@ declare(strict_types=1);
 namespace NetOs\Debug;
 
 use Illuminate\Contracts\Config\Repository;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Http\Client\Events\ConnectionFailed;
+use Illuminate\Http\Client\Events\RequestSending;
+use Illuminate\Http\Client\Events\ResponseReceived;
+use Illuminate\Queue\Events\JobFailed;
+use Illuminate\Queue\Events\JobProcessed;
+use Illuminate\Queue\Events\JobProcessing;
+use NetOs\Debug\Collectors\HttpClientRecorder;
 use NetOs\Debug\Console\CollectionsCommand;
 use NetOs\Debug\Console\ErdCommand;
 use NetOs\Debug\Http\Middleware\SendRequestToNetosDebug;
 use NetOs\Debug\Support\PayloadSizeLimiter;
+use NetOs\Debug\Support\WorkContext;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
@@ -51,6 +60,12 @@ class NetOsDebugServiceProvider extends PackageServiceProvider
             ),
         );
 
+        // Both hold state across the events they answer — what is in flight,
+        // and which job is being processed — so neither can be rebuilt per
+        // event.
+        $this->app->singleton(WorkContext::class);
+        $this->app->singleton(HttpClientRecorder::class);
+
         if (! $this->isActive() || ! $this->config()->get('netos-debug.configure_debugbar', true)) {
             return;
         }
@@ -64,11 +79,46 @@ class NetOsDebugServiceProvider extends PackageServiceProvider
 
     public function packageBooted(): void
     {
-        if ($this->app->runningInConsole() || ! $this->isActive()) {
+        if (! $this->isActive()) {
+            return;
+        }
+
+        // Before the console check, not after it: a queued job refreshing a
+        // token and a command talking to an upstream are exactly the calls that
+        // are hardest to see from anywhere else.
+        $this->watchOutgoingCalls();
+
+        if ($this->app->runningInConsole()) {
             return;
         }
 
         $this->app->make(Kernel::class)->pushMiddleware(SendRequestToNetosDebug::class);
+    }
+
+    /**
+     * Laravel's own client fires these three around every call it makes, and the
+     * queue fires the other two around every job — which is how a call made
+     * inside one can say so.
+     */
+    private function watchOutgoingCalls(): void
+    {
+        if (! $this->config()->get('netos-debug.http_client.enabled', true)) {
+            return;
+        }
+
+        $events = $this->app->make(Dispatcher::class);
+
+        $events->listen(RequestSending::class, [HttpClientRecorder::class, 'sending']);
+        $events->listen(ResponseReceived::class, [HttpClientRecorder::class, 'received']);
+        $events->listen(ConnectionFailed::class, [HttpClientRecorder::class, 'failed']);
+
+        $events->listen(JobProcessing::class, function (JobProcessing $event): void {
+            $this->app->make(WorkContext::class)->enterJob($event->job->resolveName());
+        });
+
+        $events->listen([JobProcessed::class, JobFailed::class], function (): void {
+            $this->app->make(WorkContext::class)->leaveJob();
+        });
     }
 
     /**
