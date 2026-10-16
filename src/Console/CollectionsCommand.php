@@ -22,7 +22,7 @@ use NetOs\Debug\Collections\SavedRequest;
 class CollectionsCommand extends Command
 {
     protected $signature = 'netos-debug:collections
-        {action : list, read, save or forget}
+        {action : list, read, save, import or forget}
         {collection? : the collection to act on}
         {operation? : the operation id, for forget}';
 
@@ -46,9 +46,42 @@ class CollectionsCommand extends Command
                 ),
             ]),
             'save' => $this->save($store, $collection),
+            'import' => $this->import($store, $collection),
             'forget' => $this->say($store->forget($collection, (string) ($this->argument('operation') ?? ''))),
             default => $this->refuse("Unknown action '{$action}'."),
         };
+    }
+
+    /**
+     * Many requests at once, as the desktop app converted them.
+     *
+     * Reading somebody's OpenAPI or Insomnia file is the app's job — the file
+     * sits on their machine, not in this container, and an import should not
+     * need a container to be running at all. What is left for this side is the
+     * part only this side can do: writing the collection file in the
+     * repository, once, however many requests arrived.
+     */
+    private function import(CollectionStore $store, string $collection): int
+    {
+        $raw = json_decode((string) file_get_contents('php://stdin'), true);
+
+        if (! is_array($raw) || $raw === []) {
+            return $this->refuse('Import expects a JSON array of requests on stdin.');
+        }
+
+        $requests = [];
+
+        foreach ($raw as $one) {
+            if (is_array($one)) {
+                $requests[] = SavedRequest::fromArray($one);
+            }
+        }
+
+        if ($requests === []) {
+            return $this->refuse('None of those entries is a request.');
+        }
+
+        return $this->say($store->import($collection, $requests) + ['imported' => count($requests)]);
     }
 
     /**

@@ -99,6 +99,41 @@ final readonly class CollectionStore
         return $this->write($name, $kept);
     }
 
+    /**
+     * Adds many requests at once, keyed by verb and path like a single save.
+     *
+     * One read and one write for the lot: an import is fifty requests more
+     * often than it is one, and fifty saves would be fifty passes over the same
+     * file.
+     *
+     * @param  array<int, SavedRequest>  $requests
+     * @return array{file: string, operations: int, added: int, replaced: int}
+     */
+    public function import(string $name, array $requests): array
+    {
+        $kept = $this->read($name);
+        $existing = array_map(fn (SavedRequest $one): string => $one->operationId(), $kept);
+        $added = 0;
+        $replaced = 0;
+
+        foreach ($requests as $request) {
+            $at = array_search($request->operationId(), $existing, true);
+
+            if ($at === false) {
+                $kept[] = $request;
+                $existing[] = $request->operationId();
+                $added++;
+
+                continue;
+            }
+
+            $kept[$at] = $request;
+            $replaced++;
+        }
+
+        return $this->write($name, array_values($kept)) + ['added' => $added, 'replaced' => $replaced];
+    }
+
     /** @return array{file: string, operations: int} */
     public function forget(string $name, string $operationId): array
     {
