@@ -112,4 +112,13 @@ return [
     'erd' => [
         'path' => env('NETOS_DEBUG_ERD_PATH', 'database'),
     ],
+
+    /*
+    | Mock fixtures for the third-party APIs this application calls, one YAML
+    | file per service, relative to the application root unless the path is
+    | absolute. Secrets are never written here, only the config key to read.
+    */
+    'mocks' => [
+        'path' => env('NETOS_DEBUG_MOCKS_PATH', 'mocks'),
+    ],
 ];

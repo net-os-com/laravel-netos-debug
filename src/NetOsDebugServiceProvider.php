@@ -16,7 +16,9 @@ use Illuminate\Queue\Events\JobProcessing;
 use NetOs\Debug\Collectors\HttpClientRecorder;
 use NetOs\Debug\Console\CollectionsCommand;
 use NetOs\Debug\Console\ErdCommand;
+use NetOs\Debug\Console\MocksCommand;
 use NetOs\Debug\Http\Middleware\SendRequestToNetosDebug;
+use NetOs\Debug\Mocks\MockStore;
 use NetOs\Debug\Support\PayloadSizeLimiter;
 use NetOs\Debug\Support\WorkContext;
 use Spatie\LaravelPackageTools\Package;
@@ -48,7 +50,8 @@ class NetOsDebugServiceProvider extends PackageServiceProvider
             ->name('netos-debug')
             ->hasConfigFile()
             ->hasCommand(CollectionsCommand::class)
-            ->hasCommand(ErdCommand::class);
+            ->hasCommand(ErdCommand::class)
+            ->hasCommand(MocksCommand::class);
     }
 
     public function packageRegistered(): void
@@ -65,6 +68,7 @@ class NetOsDebugServiceProvider extends PackageServiceProvider
         // event.
         $this->app->singleton(WorkContext::class);
         $this->app->singleton(HttpClientRecorder::class);
+        $this->app->singleton(MockStore::class);
 
         if (! $this->isActive() || ! $this->config()->get('netos-debug.configure_debugbar', true)) {
             return;

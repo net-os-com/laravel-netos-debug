@@ -44,6 +44,7 @@ php artisan vendor:publish --tag=netos-debug-config
 | `max_payload_bytes` | 512 KB | Larger payloads are trimmed before sending |
 | `configure_debugbar` | `true` | Whether the package applies the Debugbar options below |
 | `collections.path` | `openapi` | Where saved API requests are written, relative to the app root |
+| `mocks.path` | `mocks` | Where mock fixture files are written, relative to the app root |
 
 ### Debugbar options this package applies
 
@@ -159,3 +160,65 @@ impersonated and never a token.
 Saving the same verb and path twice replaces that operation rather than adding a
 near-duplicate, and emptying a collection deletes its file instead of leaving an
 `openapi: 3.1.0` with nothing under it.
+
+## Mocks
+
+The desktop app's mock server answers the third-party APIs this application
+calls (Balena, and later payment providers) from fixture files kept in this
+repository, so a flow that depends on an upstream can be reproduced without it:
+
+```bash
+php artisan netos-debug:mocks list
+php artisan netos-debug:mocks forget balena --hash=<hash from list>
+php artisan netos-debug:mocks secret services.mollie.webhook_secret
+echo '{"name":"balena","title":"Balena","endpoints":[],"webhooks":[]}' \
+    | php artisan netos-debug:mocks save --hash=<hash from list>
+```
+
+One file per service, under `mocks.path` — `mocks/balena.yaml` by default:
+
+```yaml
+name: Balena
+endpoints:
+  -
+    id: fleet
+    name: Fleet
+    method: GET
+    path: /v7/device
+    query:
+      $filter: 'belongs_to__application eq *'
+    responses:
+      -
+        id: three
+        name: 'Three devices'
+        status: 200
+        delay_ms: 250
+        body: |
+          {"d":[{"id":1},{"id":2},{"id":3}]}
+webhooks:
+  -
+    id: device-online
+    name: 'Device online'
+    method: POST
+    path: /webhooks/balena
+    signature:
+      kind: hmac-sha256
+      header: X-Signature
+      prefix: 'sha256='
+      secret_config: services.balena.webhook_secret
+    body: |
+      {"event":"online"}
+```
+
+Keys that are empty are left out of the file. `save` and `forget` take the hash
+`list` returned and refuse when the file has changed or disappeared since, so an
+edit made in an editor is never overwritten silently. A file that does not parse
+or validate is reported under `problems` and left out of `services`.
+
+**Bodies are text.** A body is stored and served exactly as written, never
+re-encoded, so a response can be deliberately malformed JSON.
+
+**Nothing secret is written.** A signature names the config key that holds its
+secret, such as `services.mollie.webhook_secret`, and a value that is not a
+dotted key is refused. `secret` reads that key from this application's
+configuration when the desktop app needs to sign a webhook.
