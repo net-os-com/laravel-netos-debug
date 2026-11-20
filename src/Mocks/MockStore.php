@@ -34,6 +34,10 @@ final readonly class MockStore
             $name = basename($file, '.yaml');
 
             try {
+                if (preg_match(MockValidator::ID, $name) !== 1) {
+                    throw new RuntimeException('File name must be a slug: a-z, 0-9 and -.');
+                }
+
                 $parsed = Yaml::parseFile($file);
 
                 if (! is_array($parsed)) {

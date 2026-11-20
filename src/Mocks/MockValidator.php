@@ -21,6 +21,12 @@ final class MockValidator
     public function errors(array $service): array
     {
         $errors = [];
+        $name = $service['name'] ?? null;
+
+        if (! is_string($name) || preg_match(self::ID, $name) !== 1) {
+            $errors[] = "Service name {$this->text($name)} must be a slug: a-z, 0-9 and -.";
+        }
+
         $endpoints = $this->rows($service['endpoints'] ?? []);
 
         $this->ids($endpoints, 'Endpoint', $errors);
