@@ -34,6 +34,7 @@ final class MockValidator
             $label = 'Endpoint '.$this->text($endpoint['id'] ?? '');
 
             $this->request($endpoint, $label, $errors);
+            $this->pairs($endpoint['query'] ?? [], 'query', 'query parameter', $label, $errors);
 
             $responses = $this->rows($endpoint['responses'] ?? []);
             $this->ids($responses, 'Response', $errors, $label);
@@ -50,6 +51,7 @@ final class MockValidator
             $label = 'Webhook '.$this->text($webhook['id'] ?? '');
 
             $this->request($webhook, $label, $errors);
+            $this->pairs($webhook['headers'] ?? [], 'headers', 'header', $label, $errors);
             $this->signature($webhook['signature'] ?? [], $label, $errors);
 
             if (! is_string($webhook['body'] ?? '')) {
@@ -132,6 +134,26 @@ final class MockValidator
 
         if (! is_string($response['body'] ?? '')) {
             $errors[] = "{$label}: body must be text.";
+        }
+
+        $this->pairs($response['headers'] ?? [], 'headers', 'header', $label, $errors);
+    }
+
+    /** @param  list<string>  $errors */
+    private function pairs(mixed $pairs, string $field, string $one, string $label, array &$errors): void
+    {
+        $pairs = $pairs instanceof \stdClass ? (array) $pairs : $pairs;
+
+        if (! is_array($pairs) || ($pairs !== [] && array_is_list($pairs))) {
+            $errors[] = "{$label}: {$field} must be a map of names to values.";
+
+            return;
+        }
+
+        foreach ($pairs as $name => $value) {
+            if (! is_scalar($value)) {
+                $errors[] = "{$label}: {$one} {$this->text($name)} must be a single value, not a list, a map or nothing.";
+            }
         }
     }
 

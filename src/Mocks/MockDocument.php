@@ -173,12 +173,24 @@ final class MockDocument
 
     /**
      * An empty map has to leave as `{}`, which PHP can only say with an object.
-     *
-     * @return array<string, mixed>|\stdClass
+     * YAML reads `page: 2` as a number, but every value on the wire is text.
+     * Whatever is not a map of single values is left for the validator to refuse.
      */
-    private static function map(mixed $value): array|\stdClass
+    private static function map(mixed $value): mixed
     {
-        return is_array($value) && $value !== [] ? $value : new \stdClass;
+        if ($value === []) {
+            return new \stdClass;
+        }
+
+        if (! is_array($value) || array_is_list($value)) {
+            return $value;
+        }
+
+        return array_map(fn (mixed $one): mixed => match (true) {
+            is_bool($one) => $one ? 'true' : 'false',
+            is_int($one), is_float($one) => (string) $one,
+            default => $one,
+        }, $value);
     }
 
     /** @return array<string, mixed> */

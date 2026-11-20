@@ -6,9 +6,10 @@ namespace NetOs\Debug\Console;
 
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Config\Repository;
+use JsonException;
 use NetOs\Debug\Mocks\MockStore;
 use NetOs\Debug\Mocks\MockValidator;
-use RuntimeException;
+use Throwable;
 
 /**
  * The desktop app's way in and out of the mock fixture files, speaking JSON on
@@ -42,7 +43,7 @@ class MocksCommand extends Command
                 'secret' => $this->reveal($config, $name),
                 default => $this->refuse("Unknown action '{$action}'."),
             };
-        } catch (RuntimeException $e) {
+        } catch (Throwable $e) {
             return $this->refuse($e->getMessage());
         }
     }
@@ -91,14 +92,18 @@ class MocksCommand extends Command
     /** @param  array<string, mixed>  $payload */
     private function say(array $payload): int
     {
-        $this->line((string) json_encode($payload + ['error' => null]));
+        try {
+            $this->line(json_encode($payload + ['error' => null], JSON_THROW_ON_ERROR));
+        } catch (JsonException $e) {
+            return $this->refuse("The answer cannot be sent as JSON: {$e->getMessage()}. Check the fixture files for text that is not UTF-8.");
+        }
 
         return self::SUCCESS;
     }
 
     private function refuse(string $message): int
     {
-        $this->line((string) json_encode(['error' => $message]));
+        $this->line((string) json_encode(['error' => $message], JSON_INVALID_UTF8_SUBSTITUTE));
 
         return self::FAILURE;
     }
