@@ -6,9 +6,9 @@ namespace NetOs\Debug\Mocks;
 
 final class MockValidator
 {
-    public const string ID = '/^[a-z0-9][a-z0-9-]*$/';
+    public const string ID = '/^[a-z0-9][a-z0-9-]*\z/';
 
-    public const string SECRET_CONFIG = '/^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)+$/';
+    public const string SECRET_CONFIG = '/^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)+\z/';
 
     private const array METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 
@@ -21,10 +21,9 @@ final class MockValidator
     public function errors(array $service): array
     {
         $errors = [];
-        $name = $service['name'] ?? null;
 
-        if (! is_string($name) || preg_match(self::ID, $name) !== 1) {
-            $errors[] = "Service name {$this->text($name)} must be a slug: a-z, 0-9 and -.";
+        if (($error = $this->nameError($service['name'] ?? null)) !== null) {
+            $errors[] = $error;
         }
 
         $endpoints = $this->rows($service['endpoints'] ?? []);
@@ -59,6 +58,15 @@ final class MockValidator
         }
 
         return $errors;
+    }
+
+    public function nameError(mixed $name): ?string
+    {
+        if (is_string($name) && preg_match(self::ID, $name) === 1) {
+            return null;
+        }
+
+        return "Service name {$this->text($name)} must be a slug: a-z, 0-9 and -.";
     }
 
     /**
@@ -162,6 +170,6 @@ final class MockValidator
 
     private function text(mixed $value): string
     {
-        return is_scalar($value) ? "'{$value}'" : "'?'";
+        return is_scalar($value) ? "'".addcslashes((string) $value, "\0..\37")."'" : "'?'";
     }
 }

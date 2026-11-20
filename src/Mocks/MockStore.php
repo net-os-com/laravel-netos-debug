@@ -70,7 +70,7 @@ final readonly class MockStore
      */
     public function save(array $contract, ?string $expectedHash): array
     {
-        $file = $this->file((string) ($contract['name'] ?? ''));
+        $file = $this->file($contract['name'] ?? null);
 
         $this->guard($file, $expectedHash);
 
@@ -137,17 +137,16 @@ final readonly class MockStore
         return (string) sha1_file($file);
     }
 
-    /**
-     * A service name becomes a file name, so it is reduced to something that
-     * cannot leave the directory it is meant to be in.
-     */
-    private function file(string $name): string
+    /** Only a validated name reaches the path, so nothing can leave the directory. */
+    private function file(mixed $name): string
     {
-        $slug = mb_strtolower(trim($name));
-        $slug = (string) preg_replace('~[^a-z0-9._-]+~', '-', $slug);
-        $slug = trim($slug, '-.');
+        $error = $this->validator->nameError($name);
 
-        return $this->directory().'/'.($slug === '' ? 'mock' : $slug).'.yaml';
+        if ($error !== null) {
+            throw new RuntimeException($error);
+        }
+
+        return $this->directory().'/'.$name.'.yaml';
     }
 
     private function relative(string $file): string
